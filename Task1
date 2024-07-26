@@ -1,0 +1,93 @@
+
+% Define the FIS
+fis = mamfis('Name', 'AssistiveCareController');
+
+% Add input variables
+fis = addInput(fis, [15 35], 'Name', 'RoomTemp');
+fis = addInput(fis, [0 100], 'Name', 'ActivityLevel');
+fis = addInput(fis, [0 100], 'Name', 'AmbientLight');
+
+% Add output variables
+fis = addOutput(fis, [0 100], 'Name', 'HVACPower');
+fis = addOutput(fis, [0 100], 'Name', 'LightIntensity');
+fis = addOutput(fis, [0 100], 'Name', 'NoiseControl');
+
+% Add membership functions for RoomTemp
+fis = addMF(fis, 'RoomTemp', 'zmf', [15 25], 'Name', 'Cool');
+fis = addMF(fis, 'RoomTemp', 'pimf', [20 23 27 30], 'Name', 'Comfortable');
+fis = addMF(fis, 'RoomTemp', 'smf', [25 35], 'Name', 'Warm');
+
+% Add membership functions for ActivityLevel
+fis = addMF(fis, 'ActivityLevel', 'trapmf', [0 0 20 40], 'Name', 'Low');
+fis = addMF(fis, 'ActivityLevel', 'trapmf', [30 50 70 90], 'Name', 'Moderate');
+fis = addMF(fis, 'ActivityLevel', 'trapmf', [80 90 100 100], 'Name', 'High');
+
+% Add membership functions for AmbientLight
+fis = addMF(fis, 'AmbientLight', 'gaussmf', [15 0], 'Name', 'Dark');
+fis = addMF(fis, 'AmbientLight', 'gaussmf', [15 50], 'Name', 'Medium');
+fis = addMF(fis, 'AmbientLight', 'gaussmf', [15 100], 'Name', 'Bright');
+
+% Add membership functions for outputs (using same type for simplicity)
+for i = 1:3
+    fis = addMF(fis, fis.Outputs(i).Name, 'trimf', [0 0 50], 'Name', 'Low');
+    fis = addMF(fis, fis.Outputs(i).Name, 'trimf', [0 50 100], 'Name', 'Medium');
+    fis = addMF(fis, fis.Outputs(i).Name, 'trimf', [50 100 100], 'Name', 'High');
+end
+
+% Add rules (simplified for brevity)
+ruleList = [
+    1 1 1 1 1 3 1 1;  % If Cool, Low activity, Dark, then Low HVAC, Low Light, High Noise Control
+    3 3 3 3 3 1 1 1;  % If Warm, High activity, Bright, then High HVAC, High Light, Low Noise Control
+    2 2 2 2 2 2 1 1;  % If Comfortable, Moderate activity, Medium light, then Medium everything
+];
+fis = addRule(fis, ruleList);
+
+% Save the FIS for future use
+writeFIS(fis, 'AssistiveCareController');
+
+% Set up color scheme
+colormap(parula);
+
+% Generate the FIS Structure plot with enhanced styling
+figure('Name', 'Membership Functions', 'NumberTitle', 'off', 'Color', [0.95 0.95 0.95]);
+for i = 1:3
+    ax = styledSubplot(2, 3, i);
+    plotmf(fis, 'input', i);
+    title(fis.Inputs(i).Name, 'FontWeight', 'bold');
+    xlabel(fis.Inputs(i).Name, 'FontWeight', 'bold');
+    ylabel('Degree of Membership', 'FontWeight', 'bold');
+end
+
+for i = 1:3
+    ax = styledSubplot(2, 3, i+3);
+    plotmf(fis, 'output', i);
+    title(fis.Outputs(i).Name, 'FontWeight', 'bold');
+    xlabel(fis.Outputs(i).Name, 'FontWeight', 'bold');
+    ylabel('Degree of Membership', 'FontWeight', 'bold');
+end
+
+% Generate 3D scatter plot for rules
+figure('Name', 'Rule Visualization', 'NumberTitle', 'off', 'Color', [0.95 0.95 0.95]);
+[x, y, z] = meshgrid(15:5:35, 0:25:100, 0:25:100);
+outputs = evalfis(fis, [x(:) y(:) z(:)]);
+
+scatter3(x(:), y(:), z(:), 50, outputs(:,1), 'filled');
+title('HVAC Power Rule Visualization', 'FontWeight', 'bold');
+xlabel('Room Temperature (°C)', 'FontWeight', 'bold');
+ylabel('Activity Level (%)', 'FontWeight', 'bold');
+zlabel('Ambient Light (%)', 'FontWeight', 'bold');
+colorbar;
+view(45, 30);
+
+% Generate parallel coordinates plot
+figure('Name', 'Parallel Coordinates', 'NumberTitle', 'off', 'Color', [0.95 0.95 0.95]);
+parallelcoords([x(:) y(:) z(:) outputs]);
+title('Parallel Coordinates Plot of Inputs and Outputs', 'FontWeight', 'bold');
+xlabel('Variables', 'FontWeight', 'bold');
+ylabel('Normalized Values', 'FontWeight', 'bold');
+set(gca, 'XTickLabel', {'RoomTemp', 'ActivityLevel', 'AmbientLight', 'HVACPower', 'LightIntensity', 'NoiseControl'});
+
+% Open the Rule Viewer with custom position and size
+ruleViewerFig = figure('Name', 'Rule Viewer', 'NumberTitle', 'off', 'Color', [0.95 0.95 0.95]);
+ruleview(fis);
+set(ruleViewerFig, 'Position', [100, 100, 800, 600]);
