@@ -1,0 +1,58 @@
+% Define the benchmark functions
+benchmarkFunctions = {'cec2005_function1', 'cec2005_function2', 'cec2005_function3'};
+
+% Define dimensions to test
+dimensions = [2, 10];
+
+% Optimization settings
+maxIter = 100; % Maximum number of iterations for optimization
+popSize = 50;  % Population size for GA and PSO
+
+% Loop through benchmark functions
+for funcIdx = 1:length(benchmarkFunctions)
+    func = benchmarkFunctions{funcIdx};
+    fprintf('Testing %s\n', func);
+
+    % Loop through dimensions
+    for dimIdx = 1:length(dimensions)
+        D = dimensions(dimIdx);
+        fprintf('  Dimension: %d\n', D);
+
+        % Define optimization problem
+        problem = struct;
+        problem.objective = @(x) feval(func, x); % Objective function handle
+        problem.nvars = D;  % Number of variables
+        problem.lb = -5 * ones(D, 1);  % Lower bounds
+        problem.ub = 5 * ones(D, 1);   % Upper bounds
+
+        % Genetic Algorithm
+        ga_opts = optimoptions('ga', 'MaxGenerations', maxIter, 'PopulationSize', popSize);
+        try
+            [ga_x, ga_fval] = ga(problem.objective, problem.nvars, [], [], [], [], problem.lb, problem.ub, [], ga_opts);
+            fprintf('    GA: Best Value = %.4f\n', ga_fval);
+        catch ME
+            fprintf('    GA Error: %s\n', ME.message);
+        end
+
+        % Particle Swarm Optimization
+        ps_opts = optimoptions('particleswarm', 'MaxIterations', maxIter, 'SwarmSize', popSize);
+        try
+            [ps_x, ps_fval] = particleswarm(problem.objective, problem.nvars, problem.lb, problem.ub, ps_opts);
+            fprintf('    PSO: Best Value = %.4f\n', ps_fval);
+        catch ME
+            fprintf('    PSO Error: %s\n', ME.message);
+        end
+
+        % Simulated Annealing
+        sa_opts = optimoptions('simulannealbnd', 'MaxIterations', maxIter);
+        try
+            [sa_x, sa_fval] = simulannealbnd(problem.objective, zeros(D, 1), problem.lb, problem.ub, sa_opts);
+            fprintf('    SA: Best Value = %.4f\n', sa_fval);
+        catch ME
+            fprintf('    SA Error: %s\n', ME.message);
+        end
+
+        % Plot results (if needed)
+        % Here you can add code to plot or save results if necessary.
+    end
+end
